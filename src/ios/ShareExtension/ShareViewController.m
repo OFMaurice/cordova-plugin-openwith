@@ -139,6 +139,9 @@
                 }
 
                 NSString *suggestedName = @"";
+				if([(NSObject*)item isKindOfClass:[NSURL class]]) {
+                    suggestedName = ((NSURL*)item).lastPathComponent;
+                }
                 if ([itemProvider respondsToSelector:NSSelectorFromString(@"getSuggestedName")]) {
                     suggestedName = [itemProvider valueForKey:@"suggestedName"];
                 }
