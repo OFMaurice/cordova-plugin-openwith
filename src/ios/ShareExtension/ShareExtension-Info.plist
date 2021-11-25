@@ -25,19 +25,26 @@
 		<key>NSExtensionAttributes</key>
 		<dict>
 			<key>NSExtensionActivationRule</key>
-			<!-- string>TRUEPREDICATE</string -->
-      <dict>
-        <key>NSExtensionActivationSupportsImageWithMaxCount</key>
-        <integer>1</integer>
-        <!-- key>NSExtensionActivationSupportsMovieWithMaxCount</key>
-        <integer>1</integer -->
-        <!-- key>NSExtensionActivationSupportsWebURLWithMaxCount</key>
-        <integer>1</integer -->
-      </dict>
-      <key>NSExtensionActivationUsesStrictMatching</key>
-      <integer>1</integer>
-      <key>NSExtensionActivationDictionaryVersion</key>
-      <integer>2</integer>
+			<dict>
+				<key>NSExtensionActivationDictionaryVersion</key>
+				<integer>2</integer>
+				<key>NSExtensionActivationSupportsAttachmentsWithMaxCount</key>
+				<integer>10</integer>
+				<key>NSExtensionActivationSupportsFileWithMaxCount</key>
+				<integer>10</integer>
+				<key>NSExtensionActivationSupportsImageWithMaxCount</key>
+				<integer>10</integer>
+				<key>NSExtensionActivationSupportsMovieWithMaxCount</key>
+				<integer>5</integer>
+				<key>NSExtensionActivationSupportsText</key>
+				<true/>
+				<key>NSExtensionActivationSupportsWebPageWithMaxCount</key>
+				<integer>10</integer>
+				<key>NSExtensionActivationSupportsWebURLWithMaxCount</key>
+				<integer>10</integer>
+				<key>NSExtensionActivationUsesStrictMatching</key>
+				<integer>0</integer>
+			</dict>
 		</dict>
 		<key>NSExtensionMainStoryboard</key>
 		<string>MainInterface</string>
