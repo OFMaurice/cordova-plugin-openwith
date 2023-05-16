@@ -212,14 +212,14 @@ static NSDictionary* launchOptions = nil;
     }
 
     [self.userDefaults synchronize];
-    NSObject *object = [self.userDefaults objectForKey:@"image"];
+    NSObject *object = [self.userDefaults objectForKey:@"share"];
     if (object == nil) {
         [self debug:@"[checkForFileToShare] Nothing to share"];
         return;
     }
 
     // Clean-up the object, assume it's been handled from now, prevent double processing
-    [self.userDefaults removeObjectForKey:@"image"];
+    [self.userDefaults removeObjectForKey:@"share"];
 
     // Extract sharing data, make sure that it is valid
     if (![object isKindOfClass:[NSDictionary class]]) {
@@ -227,36 +227,42 @@ static NSDictionary* launchOptions = nil;
         return;
     }
     NSDictionary *dict = (NSDictionary*)object;
-    NSData *data = dict[@"data"];
+    //NSData *data = dict[@"data"];
+    NSString *data = dict[@"data"];
     NSString *text = dict[@"text"];
     NSString *name = dict[@"name"];
     self.backURL = dict[@"backURL"];
     NSString *type = [self mimeTypeFromUti:dict[@"uti"]];
-    if (![data isKindOfClass:NSData.class] || ![text isKindOfClass:NSString.class]) {
-        [self debug:@"[checkForFileToShare] Data content is invalid"];
-        return;
-    }
+    
     NSArray *utis = dict[@"utis"];
     if (utis == nil) {
         utis = @[];
     }
-
-    // TODO: add the backURL to the shared intent, put it aside in the plugin
-    // TODO: implement cordova.openwith.exit(intent), will check if backURL is set
 
     // Send to javascript
     [self debug:[NSString stringWithFormat:
         @"[checkForFileToShare] Sharing text \"%@\" and a %d bytes image",
         text, data.length]];
 
-    NSString *uri = [NSString stringWithFormat: @"shareextension://index=0,name=%@,type=%@",
-        name, type];
+    NSString *uri = [NSString stringWithFormat: @"shareextension://index=0,name=%@,type=%@", name, type];
+    
+    //NSString *base64 = [NSString stringWithFormat: @"%@", data];
+    
+    //@try
+    //{
+    //    base64 = [data convertToBase64];
+    //}
+    //@catch(id anException) {
+        //Do nothing, obviously it wasn't attached because an exception was thrown.
+    //}
+
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{
         @"action": @"SEND",
         @"exit": @YES,
         @"items": @[@{
             @"text" : text,
-            @"base64": [data convertToBase64],
+            //@"base64": base64,
+            @"base64": data,
             @"type": type,
             @"utis": utis,
             @"uri": uri,

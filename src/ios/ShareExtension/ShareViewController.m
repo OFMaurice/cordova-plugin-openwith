@@ -30,6 +30,8 @@
 #import <UIKit/UIKit.h>
 #import <Social/Social.h>
 #import "ShareViewController.h"
+#import <MobileCoreServices/MobileCoreServices.h>
+
 
 @interface ShareViewController : SLComposeServiceViewController {
     int _verbosityLevel;
@@ -121,77 +123,156 @@
 
     [self setup];
     [self debug:@"[didSelectPost]"];
-
-    // This is called after the user selects Post. Do the upload of contentText and/or NSExtensionContext attachments.
+    
     for (NSItemProvider* itemProvider in ((NSExtensionItem*)self.extensionContext.inputItems[0]).attachments) {
-        
-        if ([itemProvider hasItemConformingToTypeIdentifier:SHAREEXT_UNIFORM_TYPE_IDENTIFIER]) {
-            [self debug:[NSString stringWithFormat:@"item provider = %@", itemProvider]];
-            
-            [itemProvider loadItemForTypeIdentifier:SHAREEXT_UNIFORM_TYPE_IDENTIFIER options:nil completionHandler: ^(id<NSSecureCoding> item, NSError *error) {
-                
-                NSData *data = [[NSData alloc] init];
-                if([(NSObject*)item isKindOfClass:[NSURL class]]) {
-                    data = [NSData dataWithContentsOfURL:(NSURL*)item];
-                }
-                if([(NSObject*)item isKindOfClass:[UIImage class]]) {
-                    data = UIImagePNGRepresentation((UIImage*)item);
-                }
+        [self debug:[NSString stringWithFormat:@"item provider registered indentifiers = %@", itemProvider.registeredTypeIdentifiers]];
 
-                NSString *suggestedName = @"";
-				if([(NSObject*)item isKindOfClass:[NSURL class]]) {
-                    suggestedName = ((NSURL*)item).lastPathComponent;
-                }
-                if ([itemProvider respondsToSelector:NSSelectorFromString(@"getSuggestedName")]) {
-                    suggestedName = [itemProvider valueForKey:@"suggestedName"];
-                }
-
-                NSString *uti = @"";
-                NSArray<NSString *> *utis = [NSArray new];
-                if ([itemProvider.registeredTypeIdentifiers count] > 0) {
-                    uti = itemProvider.registeredTypeIdentifiers[0];
-                    utis = itemProvider.registeredTypeIdentifiers;
-                }
-                else {
-                    uti = SHAREEXT_UNIFORM_TYPE_IDENTIFIER;
-                }
+        // TEXT case
+        if ([itemProvider hasItemConformingToTypeIdentifier:@"public.text"]) {
+            [itemProvider loadItemForTypeIdentifier:@"public.text" options:nil completionHandler: ^(NSString* item, NSError *error) {
+                [self debug:[NSString stringWithFormat:@"public.text  = %@", item]];
+                NSString *uti = @"public.plain-text";
                 NSDictionary *dict = @{
-                    @"text": self.contentText,
-                    @"backURL": self.backURL,
-                    @"data" : data,
+                    @"text" : self.contentText,
+                    @"data" : item,
                     @"uti": uti,
-                    @"utis": utis,
-                    @"name": suggestedName
+                    @"utis": itemProvider.registeredTypeIdentifiers,
+                    @"name": @"",
+                    @"type": [self mimeTypeFromUti:uti],
                 };
-                [self.userDefaults setObject:dict forKey:@"image"];
+                
+                [self.userDefaults setObject:dict forKey:@"share"];
                 [self.userDefaults synchronize];
 
-                // Emit a URL that opens the cordova app
-                NSString *url = [NSString stringWithFormat:@"%@://image", SHAREEXT_URL_SCHEME];
+                NSString *url = [NSString stringWithFormat:@"%@://share", SHAREEXT_URL_SCHEME];
 
-                // Not allowed:
-                // [[UIApplication sharedApplication] openURL:[NSURL URLWithString:url]];
-                
-                // Crashes:
-                // [self.extensionContext openURL:[NSURL URLWithString:url] completionHandler:nil];
-                
-                // From https://stackoverflow.com/a/25750229/2343390
-                // Reported not to work since iOS 8.3
-                // NSURLRequest *request = [[NSURLRequest alloc] initWithURL:[NSURL URLWithString:url]];
-                // [self.webView loadRequest:request];
-                
                 [self openURL:[NSURL URLWithString:url]];
 
-                // Inform the host that we're done, so it un-blocks its UI.
                 [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
             }];
+        }
 
-            return;
+        // IMAGE case
+        else if ([itemProvider hasItemConformingToTypeIdentifier:@"public.image"]) {
+            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSURL *item, NSError *error) {
+                if (item != nil) {
+                    [self debug:[NSString stringWithFormat:@"public.image  = %@", item]];
+                                        NSString *uti = @"public.image";
+                                        NSString *imageName = [[item path] lastPathComponent];
+                                        NSDictionary *dict = @{
+                                            @"text" : self.contentText,
+                                            @"data" : item.absoluteString,
+                                            @"uti": uti,
+                                            @"utis": itemProvider.registeredTypeIdentifiers,
+                                            @"name": imageName,
+                                            @"type": [self mimeTypeFromUti:uti],
+                                        };
+                    
+                    //NSData *data = [[NSData alloc] init];
+                    //if([(NSObject*)item isKindOfClass:[NSURL class]]) {
+                    //    data = [NSData dataWithContentsOfURL:(NSURL*)item];
+                    //}
+                    //if([(NSObject*)item isKindOfClass:[UIImage class]]) {
+                    //    data = UIImagePNGRepresentation((UIImage*)item);
+                    // }
+
+                    //NSString *suggestedName = @"";
+                    //if([(NSObject*)item isKindOfClass:[NSURL class]]) {
+                    //    suggestedName = ((NSURL*)item).lastPathComponent;
+                    //}
+                    //if ([itemProvider respondsToSelector:NSSelectorFromString(@"getSuggestedName")]) {
+                    //    suggestedName = [itemProvider valueForKey:@"suggestedName"];
+                    //}
+
+                    //NSString *uti = @"";
+                    //NSArray<NSString *> *utis = [NSArray new];
+                    //if ([itemProvider.registeredTypeIdentifiers count] > 0) {
+                    //   uti = itemProvider.registeredTypeIdentifiers[0];
+                    //   utis = itemProvider.registeredTypeIdentifiers;
+                    //}
+                    //else {
+                    //   uti = SHAREEXT_UNIFORM_TYPE_IDENTIFIER;
+                    //}
+                    //NSDictionary *dict = @{
+                    //                    @"text": self.contentText,
+                    //                    @"backURL": self.backURL,
+                    //                    @"data" : data,
+                    //                    @"uti": uti,
+                    //                    @"utis": utis,
+                    //                    @"name": suggestedName
+                    //};
+                    
+                    [self.userDefaults setObject:dict forKey:@"share"];
+                    [self.userDefaults synchronize];
+
+                    NSString *url = [NSString stringWithFormat:@"%@://share", SHAREEXT_URL_SCHEME];
+
+                    [self openURL:[NSURL URLWithString:url]];
+
+                    [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
+                }
+            }];
+        }
+
+        // Other files
+        else {
+            __block NSString *uti = itemProvider.registeredTypeIdentifiers[0];
+            [itemProvider loadItemForTypeIdentifier:uti options:nil completionHandler: ^(id<NSSecureCoding> item, NSError *error) {
+
+                [self debug:[NSString stringWithFormat:@"%@", (__bridge CFStringRef _Nonnull)uti]];
+                
+                NSString *baseUti = nil;
+                if (
+                    UTTypeConformsTo((__bridge CFStringRef _Nonnull)uti, kUTTypeAudiovisualContent)
+                    ) {
+                    baseUti = @"public.audiovisual-content";
+                    // @todo: make resize
+                }
+                else if ( UTTypeConformsTo((__bridge CFStringRef _Nonnull)uti,kUTTypeAudio)) {
+                    baseUti = @"public.audio";
+                }
+                else if ( UTTypeConformsTo((__bridge CFStringRef _Nonnull)uti,kUTTypeURL)) {
+                    baseUti = @"public.url";
+                }
+                else if ( UTTypeConformsTo((__bridge CFStringRef _Nonnull)uti,kUTTypeFileURL)) {
+                    baseUti = @"public.file-url";
+                }
+                else {
+                    baseUti = uti;
+                }
+                [self debug:[NSString stringWithFormat:@"%@ = %@", baseUti, item]];
+
+                __block NSURL *fileUrl = item;
+                
+                [self debug:[NSString stringWithFormat:@"%@", fileUrl]];
+
+                if (fileUrl != nil) {
+                    NSString *data = fileUrl.absoluteString;
+                    NSString *suggestedName = fileUrl.lastPathComponent;
+                    
+                    [self debug:[NSString stringWithFormat:@"%@", suggestedName]];
+                    
+                    NSDictionary *dict = @{
+                        @"text" : self.contentText,
+                        @"data" : data,
+                        @"uti"  : baseUti,
+                        @"utis" : itemProvider.registeredTypeIdentifiers,
+                        @"name" : suggestedName,
+                        @"type" : [self mimeTypeFromUti:uti],
+                    };
+                                            
+                    [self.userDefaults setObject:dict forKey:@"share"];
+                    [self.userDefaults synchronize];
+
+                    NSString *url = [NSString stringWithFormat:@"%@://share", SHAREEXT_URL_SCHEME];
+
+                    [self openURL:[NSURL URLWithString:url]];
+
+                    [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
+                }
+            }];
         }
     }
-
-    // Inform the host that we're done, so it un-blocks its UI.
-    [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
 }
 
 - (NSArray*) configurationItems {
@@ -251,6 +332,15 @@
 - (void) willMoveToParentViewController: (UIViewController*)parent {
     NSString *hostBundleID = [parent valueForKey:(@"_hostBundleID")];
     self.backURL = [self backURLFromBundleID:hostBundleID];
+}
+
+- (NSString *)mimeTypeFromUti: (NSString*)uti {
+    if (uti == nil) {
+        return nil;
+    }
+    CFStringRef cret = UTTypeCopyPreferredTagWithClass((__bridge CFStringRef)uti, kUTTagClassMIMEType);
+    NSString *ret = (__bridge_transfer NSString *)cret;
+    return ret == nil ? uti : ret;
 }
 
 @end
