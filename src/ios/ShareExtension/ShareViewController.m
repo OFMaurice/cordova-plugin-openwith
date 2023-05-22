@@ -156,51 +156,47 @@
         else if ([itemProvider hasItemConformingToTypeIdentifier:@"public.image"]) {
             [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSURL *item, NSError *error) {
                 if (item != nil) {
+                    NSString *imageName = [[item path] lastPathComponent];
+                    
+                    BOOL success;
+                    NSError *error;
+
+                    NSFileManager *fileManager = [NSFileManager defaultManager];
+                    
+                    NSString *groupContainerURL = [NSString stringWithString:[fileManager containerURLForSecurityApplicationGroupIdentifier:@"group.ch.ofsoftware.ofbau.shareextension"].path];
+
+                    NSString *filePath = [groupContainerURL stringByAppendingPathComponent:imageName];
+                    NSString *src = item.path;
+                    
+                    [self debug:[NSString stringWithFormat:@"%@", filePath]];
+                    [self debug:[NSString stringWithFormat:@"%@", src]];
+
+                    success = [fileManager fileExistsAtPath:src];
+                    if (success) {
+                        success = [fileManager fileExistsAtPath:filePath];
+                        if (success) {
+                            [fileManager removeItemAtPath:filePath error:&error];
+                        }
+                        
+                        success = [fileManager copyItemAtPath:src toPath:filePath error:&error];
+                        
+                        [self debug:[NSString stringWithFormat:@"%@", error]];
+                        
+                        if (success) {
+                            [self debug:[NSString stringWithFormat:@"%@", @"copy successful"]];
+                        }
+                    }
+                    
                     [self debug:[NSString stringWithFormat:@"public.image  = %@", item]];
                                         NSString *uti = @"public.image";
-                                        NSString *imageName = [[item path] lastPathComponent];
                                         NSDictionary *dict = @{
                                             @"text" : self.contentText,
-                                            @"data" : item.absoluteString,
+                                            @"data" : filePath,
                                             @"uti": uti,
                                             @"utis": itemProvider.registeredTypeIdentifiers,
                                             @"name": imageName,
                                             @"type": [self mimeTypeFromUti:uti],
                                         };
-                    
-                    //NSData *data = [[NSData alloc] init];
-                    //if([(NSObject*)item isKindOfClass:[NSURL class]]) {
-                    //    data = [NSData dataWithContentsOfURL:(NSURL*)item];
-                    //}
-                    //if([(NSObject*)item isKindOfClass:[UIImage class]]) {
-                    //    data = UIImagePNGRepresentation((UIImage*)item);
-                    // }
-
-                    //NSString *suggestedName = @"";
-                    //if([(NSObject*)item isKindOfClass:[NSURL class]]) {
-                    //    suggestedName = ((NSURL*)item).lastPathComponent;
-                    //}
-                    //if ([itemProvider respondsToSelector:NSSelectorFromString(@"getSuggestedName")]) {
-                    //    suggestedName = [itemProvider valueForKey:@"suggestedName"];
-                    //}
-
-                    //NSString *uti = @"";
-                    //NSArray<NSString *> *utis = [NSArray new];
-                    //if ([itemProvider.registeredTypeIdentifiers count] > 0) {
-                    //   uti = itemProvider.registeredTypeIdentifiers[0];
-                    //   utis = itemProvider.registeredTypeIdentifiers;
-                    //}
-                    //else {
-                    //   uti = SHAREEXT_UNIFORM_TYPE_IDENTIFIER;
-                    //}
-                    //NSDictionary *dict = @{
-                    //                    @"text": self.contentText,
-                    //                    @"backURL": self.backURL,
-                    //                    @"data" : data,
-                    //                    @"uti": uti,
-                    //                    @"utis": utis,
-                    //                    @"name": suggestedName
-                    //};
                     
                     [self.userDefaults setObject:dict forKey:@"share"];
                     [self.userDefaults synchronize];
@@ -208,6 +204,8 @@
                     NSString *url = [NSString stringWithFormat:@"%@://share", SHAREEXT_URL_SCHEME];
 
                     [self openURL:[NSURL URLWithString:url]];
+                    
+                    [NSThread sleepForTimeInterval:10.0f];
 
                     [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
                 }
@@ -245,16 +243,43 @@
                 __block NSURL *fileUrl = item;
                 
                 [self debug:[NSString stringWithFormat:@"%@", fileUrl]];
+                
+                NSString *suggestedName = fileUrl.lastPathComponent;
+                
+                BOOL success;
+
+                NSFileManager *fileManager = [NSFileManager defaultManager];
+                
+                NSString *groupContainerURL = [NSString stringWithString:[fileManager containerURLForSecurityApplicationGroupIdentifier:@"group.ch.ofsoftware.ofbau.shareextension"].path];
+
+                NSString *filePath = [groupContainerURL stringByAppendingPathComponent:suggestedName];
+                NSString *src = fileUrl.path;
+                
+                [self debug:[NSString stringWithFormat:@"%@", filePath]];
+                [self debug:[NSString stringWithFormat:@"%@", src]];
+
+                success = [fileManager fileExistsAtPath:src];
+                if (success) {
+                    success = [fileManager fileExistsAtPath:filePath];
+                    if (success) {
+                        [fileManager removeItemAtPath:filePath error:&error];
+                    }
+                    
+                    success = [fileManager copyItemAtPath:src toPath:filePath error:&error];
+                    
+                    [self debug:[NSString stringWithFormat:@"%@", error]];
+                    
+                    if (success) {
+                        [self debug:[NSString stringWithFormat:@"%@", @"copy successful"]];
+                    }
+                }
 
                 if (fileUrl != nil) {
-                    NSString *data = fileUrl.absoluteString;
-                    NSString *suggestedName = fileUrl.lastPathComponent;
-                    
                     [self debug:[NSString stringWithFormat:@"%@", suggestedName]];
                     
                     NSDictionary *dict = @{
                         @"text" : self.contentText,
-                        @"data" : data,
+                        @"data" : filePath,
                         @"uti"  : baseUti,
                         @"utis" : itemProvider.registeredTypeIdentifiers,
                         @"name" : suggestedName,
