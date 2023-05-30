@@ -124,12 +124,21 @@
     [self setup];
     [self debug:@"[didSelectPost]"];
     
+    __block int remainingAttachments = ((NSExtensionItem*)self.extensionContext.inputItems[0]).attachments.count;
+    __block NSMutableArray *items = [[NSMutableArray alloc] init];
+    __block NSDictionary *results = @{
+          @"text" : self.contentText,
+          @"backURL": self.backURL != nil ? self.backURL : @"",
+          @"items": items,
+    };
+    
     for (NSItemProvider* itemProvider in ((NSExtensionItem*)self.extensionContext.inputItems[0]).attachments) {
         [self debug:[NSString stringWithFormat:@"item provider registered indentifiers = %@", itemProvider.registeredTypeIdentifiers]];
 
         // TEXT case
         if ([itemProvider hasItemConformingToTypeIdentifier:@"public.text"]) {
             [itemProvider loadItemForTypeIdentifier:@"public.text" options:nil completionHandler: ^(NSString* item, NSError *error) {
+                --remainingAttachments;
                 [self debug:[NSString stringWithFormat:@"public.text  = %@", item]];
                 NSString *uti = @"public.plain-text";
                 NSDictionary *dict = @{
@@ -141,20 +150,26 @@
                     @"type": [self mimeTypeFromUti:uti],
                 };
                 
-                [self.userDefaults setObject:dict forKey:@"share"];
-                [self.userDefaults synchronize];
+                [items addObject:dict];
+                
+                if (remainingAttachments == 0) {
+                    [self.userDefaults setObject:results forKey:@"share"];
+                    [self.userDefaults synchronize];
 
-                NSString *url = [NSString stringWithFormat:@"%@://share", SHAREEXT_URL_SCHEME];
+                    NSString *url = [NSString stringWithFormat:@"%@://share", SHAREEXT_URL_SCHEME];
 
-                [self openURL:[NSURL URLWithString:url]];
+                    [self openURL:[NSURL URLWithString:url]];
 
-                [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
+                    [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
+                    
+                    return;
+                }
             }];
         }
-
         // IMAGE case
         else if ([itemProvider hasItemConformingToTypeIdentifier:@"public.image"]) {
             [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSURL *item, NSError *error) {
+                --remainingAttachments;
                 if (item != nil) {
                     NSString *imageName = [[item path] lastPathComponent];
                     
@@ -198,16 +213,20 @@
                                             @"type": [self mimeTypeFromUti:uti],
                                         };
                     
-                    [self.userDefaults setObject:dict forKey:@"share"];
-                    [self.userDefaults synchronize];
-
-                    NSString *url = [NSString stringWithFormat:@"%@://share", SHAREEXT_URL_SCHEME];
-
-                    [self openURL:[NSURL URLWithString:url]];
+                    [items addObject:dict];
                     
-                    [NSThread sleepForTimeInterval:10.0f];
+                    if (remainingAttachments == 0) {
+                        [self.userDefaults setObject:results forKey:@"share"];
+                        [self.userDefaults synchronize];
 
-                    [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
+                        NSString *url = [NSString stringWithFormat:@"%@://share", SHAREEXT_URL_SCHEME];
+
+                        [self openURL:[NSURL URLWithString:url]];
+
+                        [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
+                        
+                        return;
+                    }
                 }
             }];
         }
@@ -216,6 +235,8 @@
         else {
             __block NSString *uti = itemProvider.registeredTypeIdentifiers[0];
             [itemProvider loadItemForTypeIdentifier:uti options:nil completionHandler: ^(id<NSSecureCoding> item, NSError *error) {
+                
+                --remainingAttachments;
 
                 [self debug:[NSString stringWithFormat:@"%@", (__bridge CFStringRef _Nonnull)uti]];
                 
@@ -286,18 +307,26 @@
                         @"type" : [self mimeTypeFromUti:uti],
                     };
                                             
-                    [self.userDefaults setObject:dict forKey:@"share"];
-                    [self.userDefaults synchronize];
+                    [items addObject:dict];
+                    
+                    if (remainingAttachments == 0) {
+                        [self.userDefaults setObject:results forKey:@"share"];
+                        [self.userDefaults synchronize];
 
-                    NSString *url = [NSString stringWithFormat:@"%@://share", SHAREEXT_URL_SCHEME];
+                        NSString *url = [NSString stringWithFormat:@"%@://share", SHAREEXT_URL_SCHEME];
 
-                    [self openURL:[NSURL URLWithString:url]];
+                        [self openURL:[NSURL URLWithString:url]];
 
-                    [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
+                        [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
+                        
+                        return;
+                    }
                 }
             }];
         }
     }
+
+    [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
 }
 
 - (NSArray*) configurationItems {

@@ -226,51 +226,45 @@ static NSDictionary* launchOptions = nil;
         [self debug:@"[checkForFileToShare] Data object is invalid"];
         return;
     }
+    
     NSDictionary *dict = (NSDictionary*)object;
-    //NSData *data = dict[@"data"];
-    NSString *data = dict[@"data"];
+
     NSString *text = dict[@"text"];
-    NSString *name = dict[@"name"];
+    NSArray *items = dict[@"items"];
     self.backURL = dict[@"backURL"];
-    NSString *type = [self mimeTypeFromUti:dict[@"uti"]];
     
-    NSArray *utis = dict[@"utis"];
-    if (utis == nil) {
-        utis = @[];
-    }
+    NSArray *processedItems = [self processSharedItems:items];
 
-    // Send to javascript
-    [self debug:[NSString stringWithFormat:
-        @"[checkForFileToShare] Sharing text \"%@\" and a %d bytes image",
-        text, data.length]];
-
-    NSString *uri = [NSString stringWithFormat: @"shareextension://index=0,name=%@,type=%@", name, type];
-    
-    //NSString *base64 = [NSString stringWithFormat: @"%@", data];
-    
-    //@try
-    //{
-    //    base64 = [data convertToBase64];
-    //}
-    //@catch(id anException) {
-        //Do nothing, obviously it wasn't attached because an exception was thrown.
-    //}
 
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{
-        @"action": @"SEND",
-        @"exit": @YES,
-        @"items": @[@{
-            @"text" : text,
-            //@"base64": base64,
-            @"base64": data,
-            @"type": type,
-            @"utis": utis,
-            @"uri": uri,
-            @"name": name
-        }]
+        @"text": text,
+        @"items": processedItems
     }];
+    
     pluginResult.keepCallback = [NSNumber numberWithBool:YES];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:self.handlerCallback];
+}
+
+- (NSMutableArray*) processSharedItems:(NSArray*)items {
+    NSMutableArray *processedItems = [[NSMutableArray alloc] init];
+    for (NSDictionary *item in items) {
+        NSDictionary *dict = (NSDictionary*)item;
+        NSData *data = dict[@"data"];
+        NSString *text = dict[@"text"];
+        NSString *name = dict[@"name"];
+        NSString *type = [self mimeTypeFromUti:dict[@"uti"]];
+        
+        
+        [processedItems addObject:@{
+            @"text" : text,
+            @"base64": data,
+            @"type": type,
+            @"utis": @[],
+            @"uri": [NSString stringWithFormat: @"shareextension://index=0,name=%@,type=%@", name, type],
+            @"name": name
+        }];
+    }
+    return processedItems;
 }
 
 // Initialize the plugin
