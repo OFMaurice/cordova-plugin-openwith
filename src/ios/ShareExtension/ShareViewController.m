@@ -83,9 +83,10 @@
     SEL selector = NSSelectorFromString(@"openURL:options:completionHandler:");
 
     UIResponder* responder = self;
+    
     while ((responder = [responder nextResponder]) != nil) {
         NSLog(@"responder = %@", responder);
-        if([responder respondsToSelector:selector] == true) {
+        if([responder respondsToSelector:selector] == YES) {
             NSMethodSignature *methodSignature = [responder methodSignatureForSelector:selector];
             NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:methodSignature];
 
@@ -119,10 +120,11 @@
     }
 }
 
-- (void) didSelectPost {
-
+- (void) viewDidAppear:(BOOL)animated {
+    [self.view endEditing:YES];
+    
     [self setup];
-    [self debug:@"[didSelectPost]"];
+    [self debug:@"[viewDidAppear]"];
     
     __block int remainingAttachments = ((NSExtensionItem*)self.extensionContext.inputItems[0]).attachments.count;
     __block NSMutableArray *items = [[NSMutableArray alloc] init];
@@ -161,8 +163,6 @@
                     [self openURL:[NSURL URLWithString:url]];
 
                     [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
-                    
-                    return;
                 }
             }];
         }
@@ -224,8 +224,6 @@
                         [self openURL:[NSURL URLWithString:url]];
 
                         [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
-                        
-                        return;
                     }
                 }
             }];
@@ -318,15 +316,15 @@
                         [self openURL:[NSURL URLWithString:url]];
 
                         [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
-                        
-                        return;
                     }
                 }
             }];
         }
     }
+}
 
-    [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
+- (void) didSelectPost {
+    [self debug:@"[didSelectPost]"];
 }
 
 - (NSArray*) configurationItems {
